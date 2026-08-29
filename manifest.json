@@ -1,0 +1,25 @@
+{
+  "name": "Controle de Veículos e Serviços",
+  "short_name": "Veículos",
+  "description": "Cadastro de veículos, placas, serviços e valores da oficina.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#16181B",
+  "theme_color": "#16181B",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

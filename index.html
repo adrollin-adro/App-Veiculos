@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Veículos — Oficina</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#16181B">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Veículos">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #16181B;
+    --bg-soft: #1E2124;
+    --card: #24272B;
+    --card-border: #34383D;
+    --text: #ECEDEE;
+    --muted: #9A9FA6;
+    --amber: #F2A93B;
+    --amber-dim: #C98A2A;
+    --red: #E8543E;
+    --green: #4FAE7C;
+    --plate-blue: #1B4B9C;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    background:
+      radial-gradient(1200px 500px at 10% -10%, rgba(242,169,59,0.06), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 80px;
+  }
+
+  .wrap{
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* HEADER */
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .brand-eyebrow{
+    color: var(--amber);
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  h1{
+    font-family:'Oswald', sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .stats-group{
+    display:flex;
+    gap: 24px;
+  }
+
+  .vagas-box{
+    text-align:right;
+    font-family:'JetBrains Mono', monospace;
+  }
+  .vagas-num{
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--amber);
+    line-height:1;
+  }
+  .vagas-label{
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top:4px;
+  }
+
+  .semana-box{
+    padding-left: 24px;
+    border-left: 1px solid var(--card-border);
+  }
+  .semana-num{
+    color: var(--green);
+  }
+
+  @media (max-width: 560px){
+    .stats-group{ flex-direction: column; gap: 10px; align-items: flex-end; }
+    .semana-box{ border-left: none; padding-left: 0; }
+  }
+
+  /* CARD FORM */
+  .card{
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 22px;
+    margin-bottom: 24px;
+  }
+
+  .card h2{
+    font-family:'Oswald', sans-serif;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .card h2 .dot{
+    width:8px; height:8px; border-radius:50%;
+    background: var(--amber);
+    display:inline-block;
+  }
+
+  .form-grid{
+    display:grid;
+    grid-template-columns: 1.4fr 1fr 1.4fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 720px){
+    .form-grid{ grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 480px){
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+
+  .field label{
+    display:block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .hint{
+    font-size: 11px;
+    color: var(--green);
+    margin-top: 6px;
+  }
+
+  .field input{
+    width:100%;
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family:'Inter', sans-serif;
+    font-size: 14px;
+    outline:none;
+    transition: border-color 0.15s ease;
+  }
+
+  #placa{
+    font-family:'JetBrains Mono', monospace;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .field input:focus{
+    border-color: var(--amber);
+  }
+
+  .form-actions{
+    margin-top: 18px;
+    display:flex;
+    gap: 10px;
+  }
+
+  button{
+    font-family:'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    padding: 11px 20px;
+    cursor:pointer;
+    transition: filter 0.15s ease, transform 0.05s ease;
+  }
+  button:active{ transform: scale(0.98); }
+
+  .btn-primary{
+    background: var(--amber);
+    color: #1A1A1A;
+  }
+  .btn-primary:hover{ filter: brightness(1.08); }
+
+  .btn-ghost{
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--card-border);
+  }
+  .btn-ghost:hover{ color: var(--text); border-color: var(--muted); }
+
+  /* SEARCH */
+  .search-row{
+    display:flex;
+    gap:10px;
+    margin-bottom: 18px;
+  }
+  .search-row input{
+    flex:1;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: 14px;
+    outline:none;
+  }
+  .search-row input:focus{ border-color: var(--amber); }
+
+  /* LIST */
+  .list-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom: 12px;
+  }
+  .list-header h2{
+    font-family:'Oswald', sans-serif;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+
+  .vehicle-row{
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display:grid;
+    grid-template-columns: auto 1fr 1fr auto auto;
+    align-items:center;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  @media (max-width: 720px){
+    .vehicle-row{
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        "plate value"
+        "name service"
+        "actions actions";
+    }
+    .plate-badge{ grid-area: plate; }
+    .v-value{ grid-area: value; }
+    .v-name{ grid-area: name; }
+    .v-service{ grid-area: service; }
+    .v-actions{ grid-area: actions; justify-content: flex-start !important; margin-top:8px; }
+  }
+
+  .plate-badge{
+    font-family:'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 13px;
+    background: #EDEDED;
+    color: #1A1A1A;
+    border-radius: 4px;
+    padding: 6px 4px;
+    display:flex;
+    overflow:hidden;
+    width: 108px;
+    letter-spacing: 1px;
+  }
+  .plate-badge .strip{
+    background: var(--plate-blue);
+    width: 14px;
+    margin: -6px 6px -6px -4px;
+  }
+
+  .v-name{ font-weight: 600; }
+  .v-name .sub{ display:block; font-size:12px; color:var(--muted); font-weight:400; margin-top:2px;}
+
+  .v-service{ color: var(--muted); font-size: 14px; }
+
+  .v-value{
+    font-family:'JetBrains Mono', monospace;
+    font-weight: 700;
+    color: var(--green);
+    text-align:right;
+  }
+
+  .v-actions{
+    display:flex;
+    gap: 8px;
+    justify-content:flex-end;
+  }
+
+  .icon-btn{
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--muted);
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .icon-btn:hover{ color: var(--text); }
+  .icon-btn.danger:hover{ color: var(--red); border-color: var(--red); }
+
+  .empty-state{
+    text-align:center;
+    padding: 50px 20px;
+    color: var(--muted);
+  }
+  .empty-state .big{
+    font-family:'Oswald', sans-serif;
+    font-size: 18px;
+    color: var(--text);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .toast{
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--amber);
+    color: var(--text);
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events:none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 999;
+  }
+  .toast.show{
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand-eyebrow">Controle de pátio</div>
+      <h1>Veículos &amp; Serviços</h1>
+    </div>
+    <div class="stats-group">
+      <div class="vagas-box">
+        <div class="vagas-num" id="vagasNum">0/150</div>
+        <div class="vagas-label">veículos cadastrados</div>
+      </div>
+      <div class="vagas-box semana-box">
+        <div class="vagas-num semana-num" id="semanaNum">R$ 0,00</div>
+        <div class="vagas-label" id="semanaLabel">total da semana</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2><span class="dot"></span> Cadastrar / Editar veículo</h2>
+    <form id="form">
+      <input type="hidden" id="editId">
+      <div class="form-grid">
+        <div class="field">
+          <label for="placa">Placa</label>
+          <input type="text" id="placa" placeholder="ABC1D23" maxlength="8" required>
+        </div>
+        <div class="field">
+          <label for="veiculo">Nome do veículo</label>
+          <input type="text" id="veiculo" placeholder="Ex: Honda Civic prata" required>
+          <div class="hint" id="reconhecidoHint" style="display:none;">✓ veículo reconhecido pelo histórico</div>
+        </div>
+        <div class="field">
+          <label for="servico">Serviço</label>
+          <input type="text" id="servico" placeholder="Ex: Troca de óleo" required>
+        </div>
+        <div class="field">
+          <label for="valor">Valor (R$)</label>
+          <input type="text" inputmode="decimal" id="valor" placeholder="0,00" required>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="submitBtn">Cadastrar veículo</button>
+        <button type="button" class="btn-ghost" id="cancelBtn" style="display:none;">Cancelar edição</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="search-row">
+    <input type="text" id="busca" placeholder="Buscar por placa ou nome do veículo...">
+  </div>
+
+  <div class="list-header">
+    <h2>Veículos no pátio</h2>
+  </div>
+
+  <div id="lista"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v1.3 · placa automática</div>
+
+<script>
+  const LIMITE = 150;
+  const STORAGE_KEY = 'oficina_veiculos';
+
+  const form = document.getElementById('form');
+  const veiculoInput = document.getElementById('veiculo');
+  const placaInput = document.getElementById('placa');
+  const servicoInput = document.getElementById('servico');
+  const valorInput = document.getElementById('valor');
+  const editIdInput = document.getElementById('editId');
+  const submitBtn = document.getElementById('submitBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const buscaInput = document.getElementById('busca');
+  const lista = document.getElementById('lista');
+  const vagasNum = document.getElementById('vagasNum');
+  const semanaNum = document.getElementById('semanaNum');
+  const semanaLabel = document.getElementById('semanaLabel');
+  const toast = document.getElementById('toast');
+  const reconhecidoHint = document.getElementById('reconhecidoHint');
+
+  function normalizarPlaca(placa){
+    return placa.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  }
+
+  // Busca no histórico o veículo mais recente cadastrado com essa placa
+  function buscarVeiculoPorPlaca(placaDigitada){
+    const alvo = normalizarPlaca(placaDigitada);
+    if(!alvo) return null;
+
+    const veiculos = getVeiculos();
+    const encontrados = veiculos.filter(v => normalizarPlaca(v.placa) === alvo);
+    if(encontrados.length === 0) return null;
+
+    // pega o cadastro mais recente (maior id/timestamp)
+    return encontrados.reduce((mais, atual) => Number(atual.id) > Number(mais.id) ? atual : mais);
+  }
+
+  function tentarPreencherAutomatico(){
+    // não sobrescreve quando estamos editando um registro existente
+    if(editIdInput.value) return;
+
+    const encontrado = buscarVeiculoPorPlaca(placaInput.value);
+    if(encontrado){
+      veiculoInput.value = encontrado.veiculo;
+      reconhecidoHint.style.display = 'block';
+    } else {
+      reconhecidoHint.style.display = 'none';
+    }
+  }
+
+  function getVeiculos(){
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  function salvarVeiculos(lista){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+  }
+
+  function mostrarToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  }
+
+  function formatarMoeda(valor){
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  // Retorna o início (segunda 00:00) e o fim (domingo 23:59:59) da semana atual
+  function getIntervaloSemanaAtual(){
+    const hoje = new Date();
+    const diaSemana = hoje.getDay(); // 0 = domingo, 1 = segunda...
+    const diffParaSegunda = diaSemana === 0 ? -6 : 1 - diaSemana;
+
+    const inicio = new Date(hoje);
+    inicio.setDate(hoje.getDate() + diffParaSegunda);
+    inicio.setHours(0, 0, 0, 0);
+
+    const fim = new Date(inicio);
+    fim.setDate(inicio.getDate() + 6);
+    fim.setHours(23, 59, 59, 999);
+
+    return { inicio, fim };
+  }
+
+  function calcularTotalSemana(veiculos){
+    const { inicio, fim } = getIntervaloSemanaAtual();
+    return veiculos
+      .filter(v => {
+        const dataCadastro = new Date(Number(v.id));
+        return dataCadastro >= inicio && dataCadastro <= fim;
+      })
+      .reduce((soma, v) => soma + v.valor, 0);
+  }
+
+  function atualizarResumoSemana(veiculos){
+    const total = calcularTotalSemana(veiculos);
+    semanaNum.textContent = formatarMoeda(total);
+
+    const { inicio, fim } = getIntervaloSemanaAtual();
+    const opcoes = { day: '2-digit', month: '2-digit' };
+    semanaLabel.textContent = `semana ${inicio.toLocaleDateString('pt-BR', opcoes)} a ${fim.toLocaleDateString('pt-BR', opcoes)}`;
+  }
+
+  function renderizar(filtro = ''){
+    const veiculos = getVeiculos();
+    vagasNum.textContent = `${veiculos.length}/${LIMITE}`;
+    atualizarResumoSemana(veiculos);
+
+    const termo = filtro.trim().toLowerCase();
+    const filtrados = termo
+      ? veiculos.filter(v =>
+          v.placa.toLowerCase().includes(termo) ||
+          v.veiculo.toLowerCase().includes(termo))
+      : veiculos;
+
+    if(filtrados.length === 0){
+      lista.innerHTML = `
+        <div class="empty-state">
+          <div class="big">${veiculos.length === 0 ? 'Nenhum veículo cadastrado' : 'Nada encontrado'}</div>
+          <div>${veiculos.length === 0 ? 'Cadastre o primeiro veículo acima.' : 'Tente buscar por outro nome ou placa.'}</div>
+        </div>`;
+      return;
+    }
+
+    lista.innerHTML = filtrados.map(v => `
+      <div class="vehicle-row" data-id="${v.id}">
+        <div class="plate-badge"><div class="strip"></div>${v.placa}</div>
+        <div class="v-name">${v.veiculo}</div>
+        <div class="v-service">${v.servico}</div>
+        <div class="v-value">${formatarMoeda(v.valor)}</div>
+        <div class="v-actions">
+          <button class="icon-btn" onclick="editar('${v.id}')">Editar</button>
+          <button class="icon-btn danger" onclick="excluir('${v.id}')">Excluir</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const veiculos = getVeiculos();
+    const editId = editIdInput.value;
+
+    const valorTexto = valorInput.value.trim().replace(/\./g, '').replace(',', '.');
+    const valorNumerico = parseFloat(valorTexto);
+
+    if(!veiculoInput.value.trim() || !placaInput.value.trim() || !servicoInput.value.trim()){
+      mostrarToast('Preencha todos os campos antes de cadastrar.');
+      return;
+    }
+
+    if(isNaN(valorNumerico) || valorNumerico < 0){
+      mostrarToast('Digite um valor válido, ex: 150,00');
+      valorInput.focus();
+      return;
+    }
+
+    const dados = {
+      veiculo: veiculoInput.value.trim(),
+      placa: placaInput.value.trim().toUpperCase(),
+      servico: servicoInput.value.trim(),
+      valor: valorNumerico
+    };
+
+    if(editId){
+      const idx = veiculos.findIndex(v => v.id === editId);
+      if(idx > -1){
+        veiculos[idx] = { ...veiculos[idx], ...dados };
+        mostrarToast('Veículo atualizado com sucesso.');
+      }
+    } else {
+      if(veiculos.length >= LIMITE){
+        mostrarToast(`Limite de ${LIMITE} veículos atingido.`);
+        return;
+      }
+      veiculos.push({ id: Date.now().toString(), ...dados });
+      mostrarToast('Veículo cadastrado com sucesso.');
+    }
+
+    salvarVeiculos(veiculos);
+    resetForm();
+    renderizar(buscaInput.value);
+  });
+
+  function editar(id){
+    const veiculos = getVeiculos();
+    const v = veiculos.find(v => v.id === id);
+    if(!v) return;
+
+    veiculoInput.value = v.veiculo;
+    placaInput.value = v.placa;
+    servicoInput.value = v.servico;
+    valorInput.value = v.valor.toFixed(2).replace('.', ',');
+    editIdInput.value = v.id;
+
+    submitBtn.textContent = 'Salvar alterações';
+    cancelBtn.style.display = 'inline-block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function excluir(id){
+    if(!confirm('Tem certeza que deseja excluir este veículo?')) return;
+    const veiculos = getVeiculos().filter(v => v.id !== id);
+    salvarVeiculos(veiculos);
+    mostrarToast('Veículo excluído.');
+    renderizar(buscaInput.value);
+  }
+
+  function resetForm(){
+    form.reset();
+    editIdInput.value = '';
+    submitBtn.textContent = 'Cadastrar veículo';
+    cancelBtn.style.display = 'none';
+    reconhecidoHint.style.display = 'none';
+    placaInput.focus();
+  }
+
+  cancelBtn.addEventListener('click', resetForm);
+  buscaInput.addEventListener('input', () => renderizar(buscaInput.value));
+  placaInput.addEventListener('input', tentarPreencherAutomatico);
+
+  // Navegação por Enter: pula de campo em campo, e no último (Valor) salva o veículo
+  const ordemCampos = [placaInput, veiculoInput, servicoInput, valorInput];
+
+  ordemCampos.forEach((campo, index) => {
+    campo.addEventListener('keydown', (e) => {
+      if(e.key !== 'Enter') return;
+      e.preventDefault();
+
+      const proximo = ordemCampos[index + 1];
+      if(proximo){
+        proximo.focus();
+        proximo.select?.();
+      } else {
+        form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
+      }
+    });
+  });
+
+  // expõe funções usadas no HTML gerado dinamicamente
+  window.editar = editar;
+  window.excluir = excluir;
+
+  renderizar();
+
+  // registra o service worker para o app funcionar como PWA (instalável, offline)
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {
+        // se falhar (ex: rodando localmente sem servidor), o app continua funcionando normalmente
+      });
+    });
+  }
+</script>
+
+</body>
+</html>
