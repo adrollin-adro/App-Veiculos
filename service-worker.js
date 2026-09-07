@@ -1,10 +1,11 @@
-const CACHE_NOME = 'veiculos-app-v1';
+const CACHE_NOME = 'veiculos-app-v2';
 const ARQUIVOS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './logo-diasrl.png'
 ];
 
 self.addEventListener('install', (event) => {

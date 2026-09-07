@@ -1,7 +1,7 @@
 {
-  "name": "Controle de Veículos e Serviços",
-  "short_name": "Veículos",
-  "description": "Cadastro de veículos, placas, serviços e valores da oficina.",
+  "name": "DiasRL Mecânica Automotiva",
+  "short_name": "DiasRL",
+  "description": "Cadastro de veículos, placas, serviços e valores da DiasRL Mecânica Automotiva.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
