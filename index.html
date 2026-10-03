@@ -225,9 +225,27 @@
     border-left: 1px solid var(--card-border);
   }
 
+  .mes-passado-box{
+    padding-left: 24px;
+    border-left: 1px solid var(--card-border);
+    cursor: pointer;
+    transition: opacity 0.15s ease;
+  }
+  .mes-passado-box:hover{
+    opacity: 0.8;
+  }
+  .mes-passado-num{
+    color: #6FA8E8;
+  }
+  .mes-passado-box .vagas-label{
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+  }
+
   @media (max-width: 560px){
     .stats-group{ flex-direction: column; gap: 10px; align-items: flex-start; }
-    .semana-box, .mes-box{ border-left: none; padding-left: 0; }
+    .semana-box, .mes-box, .mes-passado-box{ border-left: none; padding-left: 0; }
   }
 
   /* CARD FORM */
@@ -268,6 +286,20 @@
     color: var(--muted);
     margin-bottom: 16px;
     line-height: 1.5;
+  }
+
+  .btn-fechar-mes{
+    display:block;
+    width: 100%;
+    margin-bottom: 18px;
+    padding: 12px;
+    border-style: dashed;
+    color: var(--amber);
+    border-color: var(--amber);
+    font-weight: 600;
+  }
+  .btn-fechar-mes:hover{
+    background: rgba(242, 169, 59, 0.08);
   }
 
   .arquivo-controles{
@@ -618,6 +650,10 @@
         <div class="vagas-num mes-num" id="mesNum">R$ 0,00</div>
         <div class="vagas-label" id="mesLabel">total do mês</div>
       </div>
+      <div class="vagas-box mes-passado-box" id="mesPassadoBox">
+        <div class="vagas-num mes-passado-num" id="mesPassadoNum">R$ 0,00</div>
+        <div class="vagas-label" id="mesPassadoLabel">mês passado</div>
+      </div>
     </div>
 
     <div class="filtro-periodo" id="filtroPeriodo">
@@ -640,7 +676,9 @@
 
     <div class="card card--arquivo">
       <h2><span class="dot dot--azul"></span> Histórico de meses anteriores</h2>
-      <p class="arquivo-info">Todo início de mês, os veículos do mês anterior são movidos pra cá automaticamente, e a lista atual começa do zero.</p>
+      <p class="arquivo-info">Todo início de mês, os veículos do mês anterior são movidos pra cá automaticamente, e a lista atual começa do zero. Se quiser fechar o mês atual agora mesmo, sem esperar o calendário virar, use o botão abaixo.</p>
+
+      <button type="button" class="btn-ghost btn-fechar-mes" id="fecharMesBtn">🔒 Fechar mês atual agora e zerar a lista</button>
 
       <div class="arquivo-controles">
         <select id="seletorMes">
@@ -656,7 +694,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v1.7 · arquivo mensal</div>
+<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v1.9 · mês passado</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -681,6 +719,9 @@
   const semanaLabel = document.getElementById('semanaLabel');
   const mesNum = document.getElementById('mesNum');
   const mesLabel = document.getElementById('mesLabel');
+  const mesPassadoNum = document.getElementById('mesPassadoNum');
+  const mesPassadoLabel = document.getElementById('mesPassadoLabel');
+  const mesPassadoBox = document.getElementById('mesPassadoBox');
   const toast = document.getElementById('toast');
   const reconhecidoHint = document.getElementById('reconhecidoHint');
   const telaCadastro = document.getElementById('telaCadastro');
@@ -816,6 +857,35 @@
     mostrarToast(`Mês fechado automaticamente — ${chavesParaArquivar.length} mês(es) movido(s) para o histórico.`);
   }
 
+  // Fecha o mês atual manualmente, a pedido do usuário (sem esperar o calendário virar).
+  // Move TODOS os veículos ativos (inclusive os do mês corrente) pro arquivo, e zera a lista.
+  function fecharMesManualmente(){
+    const veiculos = getVeiculos();
+    if(veiculos.length === 0){
+      mostrarToast('Não há veículos cadastrados pra fechar.');
+      return;
+    }
+
+    const chaveAtual = chaveDoMes(Date.now());
+    const confirmou = confirm(
+      `Isso vai mover os ${veiculos.length} veículo(s) cadastrados pro histórico de ${nomeDoMes(chaveAtual)} e zerar a lista atual (volta pra 0/${LIMITE}). Deseja continuar?`
+    );
+    if(!confirmou) return;
+
+    const arquivo = getArquivoMensal();
+    const existentes = arquivo[chaveAtual] || [];
+    const idsExistentes = new Set(existentes.map(v => v.id));
+    const novos = veiculos.filter(v => !idsExistentes.has(v.id));
+    arquivo[chaveAtual] = [...existentes, ...novos];
+
+    salvarArquivoMensal(arquivo);
+    salvarVeiculos([]);
+
+    mostrarToast(`Mês fechado! ${veiculos.length} veículo(s) movido(s) pro histórico de ${nomeDoMes(chaveAtual)}.`);
+    renderizar(buscaInput.value);
+    carregarSeletorDeMeses();
+  }
+
   function mostrarToast(msg){
     toast.textContent = msg;
     toast.classList.add('show');
@@ -888,6 +958,37 @@
     mesLabel.textContent = `total de ${nomeMes}`;
   }
 
+  // Retorna a chave (ex: "2026-09") do mês anterior ao atual
+  function chaveDoMesPassado(){
+    const hoje = new Date();
+    const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    return chaveDoMes(mesPassado.getTime());
+  }
+
+  // Mostra o total do mês passado puxando do histórico já arquivado
+  // (ou, se o mês ainda não foi fechado automaticamente/manualmente, soma do que estiver na lista ativa)
+  function atualizarResumoMesPassado(veiculosAtivos){
+    const chave = chaveDoMesPassado();
+    const arquivo = getArquivoMensal();
+    const doArquivo = arquivo[chave] || [];
+
+    // caso o mês passado ainda não tenha sido fechado, pega também o que sobrou na lista ativa
+    const daListaAtiva = veiculosAtivos.filter(v => chaveDoMes(v.id) === chave);
+
+    const idsJaContados = new Set(doArquivo.map(v => v.id));
+    const extras = daListaAtiva.filter(v => !idsJaContados.has(v.id));
+    const todosDoMes = [...doArquivo, ...extras];
+
+    const total = todosDoMes.reduce((soma, v) => soma + v.valor, 0);
+    mesPassadoNum.textContent = formatarMoeda(total);
+    mesPassadoLabel.textContent = todosDoMes.length > 0
+      ? `${nomeDoMes(chave)} (${todosDoMes.length})`
+      : `${nomeDoMes(chave)} — sem registros`;
+
+    mesPassadoBox.dataset.chave = chave;
+    mesPassadoBox.style.opacity = todosDoMes.length > 0 ? '1' : '0.5';
+  }
+
   // Filtra a lista de veículos de acordo com o período escolhido nos botões
   let periodoAtivo = 'todos';
 
@@ -912,6 +1013,7 @@
     vagasNumMini.textContent = `${veiculos.length}/${LIMITE}`;
     atualizarResumoSemana(veiculos);
     atualizarResumoMes(veiculos);
+    atualizarResumoMesPassado(veiculos);
 
     const veiculosNoPeriodo = filtrarPorPeriodo(veiculos, periodoAtivo);
 
@@ -1252,6 +1354,24 @@
     const nomeArquivoPdf = `relatorio-${chave}.pdf`;
     doc.save(nomeArquivoPdf);
     mostrarToast('PDF do mês arquivado gerado com sucesso.');
+  });
+
+  document.getElementById('fecharMesBtn').addEventListener('click', fecharMesManualmente);
+
+  // Clicar no quadro "mês passado" já abre o relatório detalhado daquele mês lá embaixo
+  mesPassadoBox.addEventListener('click', () => {
+    const chave = mesPassadoBox.dataset.chave;
+    if(!chave) return;
+
+    const opcaoExiste = [...seletorMes.options].some(o => o.value === chave);
+    if(!opcaoExiste){
+      mostrarToast('Esse mês ainda não foi fechado — os dados dele ainda estão na lista atual, acima.');
+      return;
+    }
+
+    seletorMes.value = chave;
+    mostrarMesArquivado(chave);
+    seletorMes.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
   });
 
   carregarSeletorDeMeses();
