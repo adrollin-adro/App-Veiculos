@@ -257,6 +257,58 @@
     display:inline-block;
   }
 
+  .dot--azul{ background: #6FA8E8; }
+
+  .card--arquivo{
+    margin-top: 28px;
+  }
+
+  .arquivo-info{
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .arquivo-controles{
+    display:flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .arquivo-controles select{
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .arquivo-controles select:focus{
+    border-color: var(--amber);
+  }
+
+  .arquivo-resumo{
+    display:flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .arquivo-resumo b{ color: var(--amber); }
+
   .form-grid{
     display:grid;
     grid-template-columns: 1fr 1.2fr 2.2fr 1fr;
@@ -585,11 +637,26 @@
     </div>
 
     <div id="lista"></div>
+
+    <div class="card card--arquivo">
+      <h2><span class="dot dot--azul"></span> Histórico de meses anteriores</h2>
+      <p class="arquivo-info">Todo início de mês, os veículos do mês anterior são movidos pra cá automaticamente, e a lista atual começa do zero.</p>
+
+      <div class="arquivo-controles">
+        <select id="seletorMes">
+          <option value="">Selecione um mês arquivado...</option>
+        </select>
+        <button type="button" class="btn-ghost btn-pdf" id="exportarPdfArquivoBtn" style="display:none;">📄 Exportar PDF deste mês</button>
+      </div>
+
+      <div id="resumoMesArquivo" class="arquivo-resumo" style="display:none;"></div>
+      <div id="listaArquivo"></div>
+    </div>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
-<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v1.6 · semana e mês</div>
+<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v1.7 · arquivo mensal</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -685,6 +752,68 @@
 
   function salvarVeiculos(lista){
     localStorage.setItem(STORAGE_KEY, JSON.stringify(lista));
+  }
+
+  // --- ARQUIVAMENTO MENSAL AUTOMÁTICO ---
+  const ARQUIVO_KEY = 'oficina_arquivo_mensal';
+
+  function getArquivoMensal(){
+    const raw = localStorage.getItem(ARQUIVO_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }
+
+  function salvarArquivoMensal(arquivo){
+    localStorage.setItem(ARQUIVO_KEY, JSON.stringify(arquivo));
+  }
+
+  // Retorna a "chave" do mês de um registro, ex: "2026-09"
+  function chaveDoMes(id){
+    const d = new Date(Number(id));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function nomeDoMes(chave){
+    const [ano, mes] = chave.split('-').map(Number);
+    const data = new Date(ano, mes - 1, 1);
+    const nome = data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    return nome.charAt(0).toUpperCase() + nome.slice(1);
+  }
+
+  // Verifica se existem veículos de meses passados na lista ativa e,
+  // se existirem, move eles pro arquivo mensal e limpa a lista ativa desses registros.
+  function migrarMesesAnterioresSeNecessario(){
+    const veiculos = getVeiculos();
+    if(veiculos.length === 0) return;
+
+    const chaveAtual = chaveDoMes(Date.now());
+    const doMesAtual = [];
+    const paraArquivar = {};
+
+    veiculos.forEach(v => {
+      const chave = chaveDoMes(v.id);
+      if(chave === chaveAtual){
+        doMesAtual.push(v);
+      } else {
+        if(!paraArquivar[chave]) paraArquivar[chave] = [];
+        paraArquivar[chave].push(v);
+      }
+    });
+
+    const chavesParaArquivar = Object.keys(paraArquivar);
+    if(chavesParaArquivar.length === 0) return; // nada de mês anterior, não precisa fazer nada
+
+    const arquivo = getArquivoMensal();
+    chavesParaArquivar.forEach(chave => {
+      const existentes = arquivo[chave] || [];
+      const idsExistentes = new Set(existentes.map(v => v.id));
+      const novos = paraArquivar[chave].filter(v => !idsExistentes.has(v.id));
+      arquivo[chave] = [...existentes, ...novos];
+    });
+
+    salvarArquivoMensal(arquivo);
+    salvarVeiculos(doMesAtual);
+
+    mostrarToast(`Mês fechado automaticamente — ${chavesParaArquivar.length} mês(es) movido(s) para o histórico.`);
   }
 
   function mostrarToast(msg){
@@ -921,6 +1050,7 @@
   window.editar = editar;
   window.excluir = excluir;
 
+  migrarMesesAnterioresSeNecessario();
   renderizar();
 
   // registra o service worker para o app funcionar como PWA (instalável, offline)
@@ -1010,6 +1140,121 @@
   }
 
   document.getElementById('exportarPdfBtn').addEventListener('click', exportarPdf);
+
+  // --- HISTÓRICO DE MESES ARQUIVADOS ---
+  const seletorMes = document.getElementById('seletorMes');
+  const listaArquivo = document.getElementById('listaArquivo');
+  const resumoMesArquivo = document.getElementById('resumoMesArquivo');
+  const exportarPdfArquivoBtn = document.getElementById('exportarPdfArquivoBtn');
+
+  function carregarSeletorDeMeses(){
+    const arquivo = getArquivoMensal();
+    const chaves = Object.keys(arquivo).sort().reverse(); // mais recente primeiro
+
+    seletorMes.innerHTML = '<option value="">Selecione um mês arquivado...</option>' +
+      chaves.map(chave => `<option value="${chave}">${nomeDoMes(chave)} (${arquivo[chave].length} veículo(s))</option>`).join('');
+
+    if(chaves.length === 0){
+      seletorMes.innerHTML = '<option value="">Nenhum mês arquivado ainda</option>';
+      seletorMes.disabled = true;
+    } else {
+      seletorMes.disabled = false;
+    }
+  }
+
+  function mostrarMesArquivado(chave){
+    if(!chave){
+      listaArquivo.innerHTML = '';
+      resumoMesArquivo.style.display = 'none';
+      exportarPdfArquivoBtn.style.display = 'none';
+      return;
+    }
+
+    const arquivo = getArquivoMensal();
+    const registros = arquivo[chave] || [];
+    const total = registros.reduce((soma, v) => soma + v.valor, 0);
+
+    resumoMesArquivo.style.display = 'flex';
+    resumoMesArquivo.innerHTML = `
+      <span>Veículos: <b>${registros.length}</b></span>
+      <span>Faturamento total: <b>${formatarMoeda(total)}</b></span>
+    `;
+
+    exportarPdfArquivoBtn.style.display = 'inline-block';
+
+    if(registros.length === 0){
+      listaArquivo.innerHTML = `<div class="empty-state"><div class="big">Nada encontrado</div></div>`;
+      return;
+    }
+
+    listaArquivo.innerHTML = registros.map(v => `
+      <div class="vehicle-row">
+        <div class="plate-badge"><div class="strip"></div>${v.placa}</div>
+        <div class="v-name">${v.veiculo}<span class="sub">${formatarDataCurta(v.id)}</span></div>
+        <div class="v-service">${v.servico}</div>
+        <div class="v-value">${formatarMoeda(v.valor)}</div>
+        <div class="v-actions"></div>
+      </div>
+    `).join('');
+  }
+
+  seletorMes.addEventListener('change', () => mostrarMesArquivado(seletorMes.value));
+
+  exportarPdfArquivoBtn.addEventListener('click', () => {
+    if(!window.jspdf){
+      mostrarToast('Não foi possível carregar o gerador de PDF. Confira sua conexão com a internet.');
+      return;
+    }
+
+    const chave = seletorMes.value;
+    if(!chave) return;
+
+    const arquivo = getArquivoMensal();
+    const registros = arquivo[chave] || [];
+    if(registros.length === 0){
+      mostrarToast('Não há veículos para exportar nesse mês.');
+      return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.setTextColor(20, 20, 20);
+    doc.text('Relatório de Veículos e Serviços', 14, 18);
+
+    doc.setFontSize(10);
+    doc.setTextColor(110, 110, 110);
+    doc.text(`Mês arquivado: ${nomeDoMes(chave)}`, 14, 25);
+
+    const linhas = registros.map(v => [
+      formatarDataCurta(v.id),
+      v.placa,
+      v.veiculo,
+      v.servico,
+      formatarMoeda(v.valor)
+    ]);
+
+    const valorTotal = registros.reduce((soma, v) => soma + v.valor, 0);
+
+    doc.autoTable({
+      startY: 32,
+      head: [['Data', 'Placa', 'Veículo', 'Serviço', 'Valor']],
+      body: linhas,
+      styles: { fontSize: 10, cellPadding: 4 },
+      headStyles: { fillColor: [111, 168, 232], textColor: [30, 30, 30], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 4: { halign: 'right' } },
+      foot: [['', '', '', 'Total', formatarMoeda(valorTotal)]],
+      footStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' }
+    });
+
+    const nomeArquivoPdf = `relatorio-${chave}.pdf`;
+    doc.save(nomeArquivoPdf);
+    mostrarToast('PDF do mês arquivado gerado com sucesso.');
+  });
+
+  carregarSeletorDeMeses();
 </script>
 
 </body>
