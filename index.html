@@ -288,6 +288,62 @@
     line-height: 1.5;
   }
 
+
+  /* MODAL DE FECHAMENTO DE MÊS */
+  .modal-overlay{
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.7);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show{ display: flex; }
+  .modal-box{
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-top: 3px solid var(--amber);
+    border-radius: 14px;
+    max-width: 440px; width: 100%;
+    padding: 24px 22px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-box h3{
+    font-family: 'Oswald', sans-serif;
+    font-size: 22px; letter-spacing: .5px;
+    color: var(--amber); margin-bottom: 10px;
+  }
+  .modal-box p{ color: var(--text); font-size: 14px; line-height: 1.55; margin-bottom: 12px; }
+  .modal-resumo{
+    display:flex; justify-content: space-between; gap: 12px;
+    background: var(--bg-soft); border: 1px solid var(--card-border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .modal-resumo b{ color: var(--amber); font-family: 'JetBrains Mono', monospace; }
+  .modal-aviso{ color: var(--muted) !important; font-size: 12.5px !important; }
+  .modal-actions{ display:flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .modal-actions button{
+    width: 100%; padding: 13px; border-radius: 10px; font-size: 14px;
+    font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;
+  }
+  .mf-primario{ background: var(--amber); color: #1a1a1a; border: none; }
+  .mf-primario:hover{ background: var(--amber-dim); }
+  .mf-secundario{ background: transparent; color: var(--amber); border: 1px solid var(--amber); }
+  .mf-cancelar{ background: transparent; color: var(--muted); border: 1px solid var(--card-border); font-weight: 500 !important; }
+
+  /* AVISO DE PDF PENDENTE */
+  .banner-pdf{
+    display:none; margin-bottom: 18px; padding: 14px 16px;
+    background: rgba(79,174,124,0.10); border: 1px solid var(--green);
+    border-radius: 12px; font-size: 14px;
+  }
+  .banner-pdf.show{ display:block; }
+  .banner-pdf .linha{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; padding: 6px 0; }
+  .banner-pdf button{
+    background: var(--green); color:#10241a; border:none; border-radius:8px;
+    padding: 9px 14px; font-weight:700; cursor:pointer; font-size: 13px;
+  }
+  .banner-pdf button.sec{ background: transparent; color: var(--green); border: 1px solid var(--green); margin-left: 6px; }
+
   .btn-fechar-mes{
     display:block;
     width: 100%;
@@ -599,7 +655,9 @@
   </nav>
 
   <!-- TELA 1: CADASTRO -->
-  <div id="telaCadastro" class="tela">
+  <div class="banner-pdf" id="bannerPdf"></div>
+
+<div id="telaCadastro" class="tela">
     <div class="card">
       <h2><span class="dot"></span> Cadastrar / Editar veículo</h2>
       <form id="form">
@@ -693,8 +751,22 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalFechar" role="dialog" aria-modal="true" aria-labelledby="mfTitulo">
+  <div class="modal-box">
+    <h3 id="mfTitulo">Fechar mês</h3>
+    <p id="mfTexto"></p>
+    <div class="modal-resumo" id="mfResumo"></div>
+    <p class="modal-aviso">Um PDF com todos os serviços do mês será gerado <b>antes</b> de zerar a lista. Os dados continuam guardados no histórico de meses anteriores.</p>
+    <div class="modal-actions">
+      <button type="button" class="mf-primario" id="mfBaixar">📄 Baixar PDF e fechar o mês</button>
+      <button type="button" class="mf-secundario" id="mfCompartilhar" style="display:none;">📤 Enviar PDF (WhatsApp/e-mail) e fechar o mês</button>
+      <button type="button" class="mf-cancelar" id="mfCancelar">Cancelar — não fechar agora</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
-<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v1.9 · mês passado</div>
+<div style="position:fixed; bottom:6px; right:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4A4E54; letter-spacing:1px;">v2.0 · fechamento com PDF</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -853,37 +925,266 @@
 
     salvarArquivoMensal(arquivo);
     salvarVeiculos(doMesAtual);
+    adicionarPendentes(chavesParaArquivar); // PDF de cada mês fechado fica disponível pra baixar/enviar
 
     mostrarToast(`Mês fechado automaticamente — ${chavesParaArquivar.length} mês(es) movido(s) para o histórico.`);
   }
 
-  // Fecha o mês atual manualmente, a pedido do usuário (sem esperar o calendário virar).
-  // Move TODOS os veículos ativos (inclusive os do mês corrente) pro arquivo, e zera a lista.
-  function fecharMesManualmente(){
+  // ==============================================================
+  // PDF DO FECHAMENTO DO MÊS
+  // ==============================================================
+  function montarPdfMes(chave, registros){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const ordenados = [...registros].sort((a, b) => Number(a.id) - Number(b.id));
+
+    const agora = new Date();
+    const dataFormatada = agora.toLocaleDateString('pt-BR');
+    const horaFormatada = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    doc.setFontSize(18);
+    doc.setTextColor(20, 20, 20);
+    doc.text('DiasRL Mecânica Automotiva', 14, 18);
+
+    doc.setFontSize(13);
+    doc.text(`Fechamento do mês — ${nomeDoMes(chave)}`, 14, 26);
+
+    doc.setFontSize(10);
+    doc.setTextColor(110, 110, 110);
+    doc.text(`Gerado em ${dataFormatada} às ${horaFormatada}  ·  ${ordenados.length} serviço(s) realizado(s)`, 14, 32);
+
+    const linhas = ordenados.map(v => [
+      formatarDataCurta(v.id),
+      v.placa,
+      v.veiculo,
+      v.servico,
+      formatarMoeda(v.valor)
+    ]);
+    const valorTotal = ordenados.reduce((soma, v) => soma + v.valor, 0);
+
+    doc.autoTable({
+      startY: 38,
+      head: [['Data', 'Placa', 'Veículo', 'Serviço', 'Valor']],
+      body: linhas,
+      styles: { fontSize: 10, cellPadding: 4 },
+      headStyles: { fillColor: [242, 169, 59], textColor: [30, 30, 30], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      columnStyles: { 4: { halign: 'right' } },
+      foot: [['', '', '', 'TOTAL DO MÊS', formatarMoeda(valorTotal)]],
+      footStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' }
+    });
+
+    const nome = `fechamento-${chave}.pdf`;
+    return { doc, nome };
+  }
+
+  // Baixa o PDF. Retorna true se foi gerado.
+  function baixarPdfMes(chave, registros){
+    if(!window.jspdf){
+      mostrarToast('Não foi possível carregar o gerador de PDF. Confira sua conexão com a internet.');
+      return false;
+    }
+    if(!registros || registros.length === 0){
+      mostrarToast('Não há veículos para gerar o PDF nesse mês.');
+      return false;
+    }
+    try{
+      const { doc, nome } = montarPdfMes(chave, registros);
+      doc.save(nome);
+      return true;
+    }catch(e){
+      console.error(e);
+      mostrarToast('Erro ao gerar o PDF.');
+      return false;
+    }
+  }
+
+  // Compartilha o PDF (WhatsApp, e-mail...) quando o aparelho permite; senão baixa.
+  // Retorna true (concluído), false (cancelado pelo usuário / erro).
+  async function compartilharPdfMes(chave, registros){
+    if(!window.jspdf){
+      mostrarToast('Não foi possível carregar o gerador de PDF. Confira sua conexão com a internet.');
+      return false;
+    }
+    if(!registros || registros.length === 0){
+      mostrarToast('Não há veículos para gerar o PDF nesse mês.');
+      return false;
+    }
+    let doc, nome;
+    try{ ({ doc, nome } = montarPdfMes(chave, registros)); }
+    catch(e){ console.error(e); mostrarToast('Erro ao gerar o PDF.'); return false; }
+
+    const arquivo = new File([doc.output('blob')], nome, { type: 'application/pdf' });
+    if(navigator.canShare && navigator.canShare({ files: [arquivo] })){
+      try{
+        await navigator.share({
+          files: [arquivo],
+          title: `Fechamento ${nomeDoMes(chave)} — DiasRL`,
+          text: `Serviços realizados em ${nomeDoMes(chave)}`
+        });
+        return true;
+      }catch(e){
+        if(e && e.name === 'AbortError') return false; // usuário cancelou o envio
+        console.error(e);
+      }
+    }
+    doc.save(nome); // sem suporte a compartilhar: baixa normalmente
+    return true;
+  }
+
+  // ==============================================================
+  // MODAL DE CONFIRMAÇÃO DO FECHAMENTO
+  // ==============================================================
+  const modalFechar = document.getElementById('modalFechar');
+  const mfTitulo = document.getElementById('mfTitulo');
+  const mfTexto = document.getElementById('mfTexto');
+  const mfResumo = document.getElementById('mfResumo');
+  const mfBaixar = document.getElementById('mfBaixar');
+  const mfCompartilhar = document.getElementById('mfCompartilhar');
+  const mfCancelar = document.getElementById('mfCancelar');
+  let modalOnCancel = null;
+
+  function fecharModal(){ modalFechar.classList.remove('show'); }
+
+  // Move todos os veículos ativos pro arquivo do mês e zera a lista
+  function arquivarMesAtualEZerar(chave, veiculos){
+    const arquivo = getArquivoMensal();
+    const existentes = arquivo[chave] || [];
+    const idsExistentes = new Set(existentes.map(v => v.id));
+    const novos = veiculos.filter(v => !idsExistentes.has(v.id));
+    arquivo[chave] = [...existentes, ...novos];
+    salvarArquivoMensal(arquivo);
+    salvarVeiculos([]);
+    mostrarToast(`Mês fechado! ${veiculos.length} veículo(s) movido(s) pro histórico de ${nomeDoMes(chave)}.`);
+    renderizar(buscaInput.value);
+    carregarSeletorDeMeses();
+  }
+
+  function abrirModalFechamento(titulo, textoIntro, aoCancelar){
     const veiculos = getVeiculos();
     if(veiculos.length === 0){
       mostrarToast('Não há veículos cadastrados pra fechar.');
       return;
     }
+    const chave = chaveDoMes(Date.now());
+    const total = veiculos.reduce((soma, v) => soma + v.valor, 0);
 
-    const chaveAtual = chaveDoMes(Date.now());
-    const confirmou = confirm(
-      `Isso vai mover os ${veiculos.length} veículo(s) cadastrados pro histórico de ${nomeDoMes(chaveAtual)} e zerar a lista atual (volta pra 0/${LIMITE}). Deseja continuar?`
+    mfTitulo.textContent = titulo;
+    mfTexto.textContent = textoIntro;
+    mfResumo.innerHTML = `
+      <span>${nomeDoMes(chave)}<br>${veiculos.length} veículo(s)</span>
+      <span style="text-align:right">Total<br><b>${formatarMoeda(total)}</b></span>`;
+    mfCompartilhar.style.display = (navigator.canShare && navigator.share) ? 'block' : 'none';
+    modalOnCancel = aoCancelar || null;
+    modalFechar.classList.add('show');
+
+    // Só fecha o mês DEPOIS que o PDF foi gerado com sucesso
+    mfBaixar.onclick = () => {
+      const lista = getVeiculos();
+      if(baixarPdfMes(chave, lista)){
+        fecharModal();
+        arquivarMesAtualEZerar(chave, lista);
+      }
+    };
+    mfCompartilhar.onclick = async () => {
+      const lista = getVeiculos();
+      if(await compartilharPdfMes(chave, lista)){
+        fecharModal();
+        arquivarMesAtualEZerar(chave, lista);
+      }
+    };
+    mfCancelar.onclick = () => {
+      fecharModal();
+      if(modalOnCancel) modalOnCancel();
+    };
+  }
+
+  // Botão "Fechar mês atual agora"
+  function fecharMesManualmente(){
+    abrirModalFechamento(
+      'Fechar o mês atual?',
+      'Você vai fechar o mês agora, sem esperar o calendário virar. A lista de veículos voltará para 0.'
     );
-    if(!confirmou) return;
+  }
 
+  // ==============================================================
+  // AVISO DE PDF PENDENTE (quando o mês fecha sozinho na virada)
+  // ==============================================================
+  var PENDENTES_KEY = 'oficina_pdf_pendentes';
+  const bannerPdf = document.getElementById('bannerPdf');
+
+  function getPendentes(){
+    try{ return JSON.parse(localStorage.getItem(PENDENTES_KEY) || '[]'); }catch(e){ return []; }
+  }
+  function salvarPendentes(l){ localStorage.setItem(PENDENTES_KEY, JSON.stringify(l)); }
+
+  function adicionarPendentes(chaves){
+    const atuais = new Set(getPendentes());
+    chaves.forEach(c => atuais.add(c));
+    salvarPendentes([...atuais].sort());
+  }
+
+  function mostrarBannerPendentes(){
+    const pend = getPendentes();
+    if(pend.length === 0){ bannerPdf.classList.remove('show'); bannerPdf.innerHTML = ''; return; }
     const arquivo = getArquivoMensal();
-    const existentes = arquivo[chaveAtual] || [];
-    const idsExistentes = new Set(existentes.map(v => v.id));
-    const novos = veiculos.filter(v => !idsExistentes.has(v.id));
-    arquivo[chaveAtual] = [...existentes, ...novos];
+    bannerPdf.innerHTML = '<div style="font-weight:700;margin-bottom:4px;">📄 PDF de fechamento disponível</div>' +
+      pend.map(chave => {
+        const regs = arquivo[chave] || [];
+        const total = regs.reduce((soma, v) => soma + v.valor, 0);
+        return `<div class="linha">
+          <span>${nomeDoMes(chave)} — ${regs.length} serviço(s) · ${formatarMoeda(total)}</span>
+          <span>
+            <button type="button" data-baixar="${chave}">Baixar PDF</button>
+            ${(navigator.canShare && navigator.share) ? `<button type="button" class="sec" data-enviar="${chave}">Enviar</button>` : ''}
+          </span>
+        </div>`;
+      }).join('');
+    bannerPdf.classList.add('show');
+  }
 
-    salvarArquivoMensal(arquivo);
-    salvarVeiculos([]);
+  function removerPendente(chave){
+    salvarPendentes(getPendentes().filter(c => c !== chave));
+    mostrarBannerPendentes();
+  }
 
-    mostrarToast(`Mês fechado! ${veiculos.length} veículo(s) movido(s) pro histórico de ${nomeDoMes(chaveAtual)}.`);
-    renderizar(buscaInput.value);
-    carregarSeletorDeMeses();
+  bannerPdf.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    const chaveBaixar = btn.dataset.baixar;
+    const chaveEnviar = btn.dataset.enviar;
+    const arquivo = getArquivoMensal();
+    if(chaveBaixar){
+      if(baixarPdfMes(chaveBaixar, arquivo[chaveBaixar] || [])) removerPendente(chaveBaixar);
+    }else if(chaveEnviar){
+      if(await compartilharPdfMes(chaveEnviar, arquivo[chaveEnviar] || [])) removerPendente(chaveEnviar);
+    }
+  });
+
+  // ==============================================================
+  // AVISO NO ÚLTIMO DIA DO MÊS (dia 28, 29, 30 ou 31, conforme o mês)
+  // ==============================================================
+  const AVISO_FIM_MES_KEY = 'oficina_aviso_fim_mes';
+
+  function ehUltimoDiaDoMes(){
+    const h = new Date();
+    return new Date(h.getFullYear(), h.getMonth(), h.getDate() + 1).getDate() === 1;
+  }
+
+  function verificarUltimoDiaDoMes(){
+    if(!ehUltimoDiaDoMes()) return;
+    if(modalFechar.classList.contains('show')) return;
+    if(getVeiculos().length === 0) return;
+
+    const h = new Date();
+    const hojeChave = `${h.getFullYear()}-${h.getMonth() + 1}-${h.getDate()}`;
+    if(localStorage.getItem(AVISO_FIM_MES_KEY) === hojeChave) return; // já perguntou hoje
+
+    abrirModalFechamento(
+      `Hoje é o último dia de ${nomeDoMes(chaveDoMes(Date.now()))}`,
+      'Quer gerar agora o PDF com todos os serviços do mês e fechar o mês?',
+      () => localStorage.setItem(AVISO_FIM_MES_KEY, hojeChave) // se cancelar, não pergunta de novo hoje
+    );
   }
 
   function mostrarToast(msg){
@@ -1303,57 +1604,10 @@
   seletorMes.addEventListener('change', () => mostrarMesArquivado(seletorMes.value));
 
   exportarPdfArquivoBtn.addEventListener('click', () => {
-    if(!window.jspdf){
-      mostrarToast('Não foi possível carregar o gerador de PDF. Confira sua conexão com a internet.');
-      return;
-    }
-
     const chave = seletorMes.value;
     if(!chave) return;
-
-    const arquivo = getArquivoMensal();
-    const registros = arquivo[chave] || [];
-    if(registros.length === 0){
-      mostrarToast('Não há veículos para exportar nesse mês.');
-      return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    doc.setFontSize(18);
-    doc.setTextColor(20, 20, 20);
-    doc.text('Relatório de Veículos e Serviços', 14, 18);
-
-    doc.setFontSize(10);
-    doc.setTextColor(110, 110, 110);
-    doc.text(`Mês arquivado: ${nomeDoMes(chave)}`, 14, 25);
-
-    const linhas = registros.map(v => [
-      formatarDataCurta(v.id),
-      v.placa,
-      v.veiculo,
-      v.servico,
-      formatarMoeda(v.valor)
-    ]);
-
-    const valorTotal = registros.reduce((soma, v) => soma + v.valor, 0);
-
-    doc.autoTable({
-      startY: 32,
-      head: [['Data', 'Placa', 'Veículo', 'Serviço', 'Valor']],
-      body: linhas,
-      styles: { fontSize: 10, cellPadding: 4 },
-      headStyles: { fillColor: [111, 168, 232], textColor: [30, 30, 30], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
-      columnStyles: { 4: { halign: 'right' } },
-      foot: [['', '', '', 'Total', formatarMoeda(valorTotal)]],
-      footStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontStyle: 'bold' }
-    });
-
-    const nomeArquivoPdf = `relatorio-${chave}.pdf`;
-    doc.save(nomeArquivoPdf);
-    mostrarToast('PDF do mês arquivado gerado com sucesso.');
+    const registros = getArquivoMensal()[chave] || [];
+    if(baixarPdfMes(chave, registros)) mostrarToast('PDF do mês arquivado gerado com sucesso.');
   });
 
   document.getElementById('fecharMesBtn').addEventListener('click', fecharMesManualmente);
@@ -1375,6 +1629,16 @@
   });
 
   carregarSeletorDeMeses();
+  mostrarBannerPendentes();
+  verificarUltimoDiaDoMes();
+  // Reconfere a cada 30 min e quando o app volta pra tela (útil se ficar aberto o dia todo)
+  setInterval(() => { migrarMesesAnterioresSeNecessario(); renderizar(buscaInput.value); carregarSeletorDeMeses(); mostrarBannerPendentes(); verificarUltimoDiaDoMes(); }, 30 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible'){
+      migrarMesesAnterioresSeNecessario(); renderizar(buscaInput.value); carregarSeletorDeMeses();
+      mostrarBannerPendentes(); verificarUltimoDiaDoMes();
+    }
+  });
 </script>
 
 </body>

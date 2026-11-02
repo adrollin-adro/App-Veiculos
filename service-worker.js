@@ -1,4 +1,4 @@
-const CACHE_NOME = 'veiculos-app-v2';
+const CACHE_NOME = 'veiculos-app-v3';
 const ARQUIVOS = [
   './',
   './index.html',
